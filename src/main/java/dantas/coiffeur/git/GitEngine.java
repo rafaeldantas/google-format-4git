@@ -8,6 +8,11 @@ import java.util.StringTokenizer;
 import com.google.common.collect.Range;
 import com.google.common.collect.TreeRangeSet;
 
+/**
+ * This whole implementation is kinda of a hack.
+ * Actually use a git client instead of the cli?
+ *
+ */
 public class GitEngine implements Git {
 
 	private final CommandExecutor commandExecutor;
@@ -41,8 +46,9 @@ public class GitEngine implements Git {
 	private int parseModifiedLineNumber(String line) {
 		StringTokenizer stringTokenizer = new StringTokenizer(line, ")");
 		while (stringTokenizer.hasMoreElements()) {
-			String nextElement = (String) stringTokenizer.nextElement();
-			if (nextElement.trim().contains("Not Committed Yet")) {
+			String nextElement = ((String) stringTokenizer.nextElement()).trim();
+			if (nextElement.contains("Not Committed Yet") && nextElement.contains("00000000")) {
+
 				int parseInt = Integer
 						.parseInt(nextElement.substring(nextElement.lastIndexOf(" ") + 1, nextElement.length()));
 				return parseInt;

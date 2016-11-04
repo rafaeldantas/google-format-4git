@@ -1,6 +1,6 @@
 # google-format-4git
 
-Simple wrapper for google-java-format that allows you to format files based on git staged/modified files.
+Simple wrapper for [google-java-format](https://github.com/google/google-java-format) that allows you to format files based on git staged/modified files.
 
 Usage:
 ```
@@ -19,3 +19,5 @@ Usage:
        Format only modified lines
        Default: false
 ```       
+
+For now, commiting the jar to [build/libs/google-format-4git.jar](build/libs/google-format-4git.jar) 

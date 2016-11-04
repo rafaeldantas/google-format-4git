@@ -46,6 +46,8 @@ public class CoiffeurFormatter {
 		jCommander.setProgramName("google-java-format-git");
 		jCommander.parse(args);
 
+		jCommander.usage();
+
 		if (!gitParameters.useGit()) {
 			Main.main(args);
 		} else {
