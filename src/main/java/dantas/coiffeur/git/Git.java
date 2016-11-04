@@ -1,16 +1,15 @@
 package dantas.coiffeur.git;
 
-import java.util.List;
-
 import com.google.common.collect.TreeRangeSet;
+import java.util.List;
 
 public interface Git {
 
-	List<String> listModified();
+    List<String> listModified();
 
-	List<String> blame(String fileName);
+    List<String> blame(String fileName);
 
-	List<Integer> listModifiedLineNumbers(String fileName);
+    List<Integer> listModifiedLineNumbers(String fileName);
 
-	TreeRangeSet<Integer> listModifiedRanges(String fileName);
+    TreeRangeSet<Integer> listModifiedRanges(String fileName);
 }

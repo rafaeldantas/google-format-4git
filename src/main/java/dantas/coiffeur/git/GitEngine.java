@@ -1,107 +1,99 @@
 package dantas.coiffeur.git;
 
+import com.google.common.base.Splitter;
+import com.google.common.collect.Range;
+import com.google.common.collect.TreeRangeSet;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import java.util.StringTokenizer;
-
-import com.google.common.collect.Range;
-import com.google.common.collect.TreeRangeSet;
 
 /**
- * This whole implementation is kinda of a hack.
- * Actually use a git client instead of the cli?
+ * This whole implementation is kinda of a hack. Actually use a git client instead of the cli?
  *
  */
 public class GitEngine implements Git {
 
-	private final CommandExecutor commandExecutor;
+    private static final String MODIFIED_LINE_PREFFIX = "0000000000000000000000000000000000000000";
 
-	public GitEngine(CommandExecutor commandExecutor) {
-		this.commandExecutor = commandExecutor;
-	}
+    private final CommandExecutor commandExecutor;
 
-	@Override
-	public List<String> listModified() {
-		return commandExecutor.execute("git ls-files -m");
-	}
+    public GitEngine(CommandExecutor commandExecutor) {
+        this.commandExecutor = commandExecutor;
+    }
 
-	@Override
-	public List<String> blame(String fileName) {
-		return commandExecutor.execute("git blame " + fileName);
-	}
+    @Override
+    public List<String> listModified() {
+        return commandExecutor.execute("git ls-files -m");
+    }
 
-	private List<Integer> parseModifiedLineNumbers(List<String> lines) {
-		List<Integer> modifiedLineNumbers = new ArrayList<>();
+    @Override
+    public List<String> blame(String fileName) {
+        return commandExecutor.execute("git blame --porcelain -n " + fileName);
+    }
 
-		for (String string : lines) {
-			int modifiedLineNumber = parseModifiedLineNumber(string);
-			if (modifiedLineNumber != 0) {
-				modifiedLineNumbers.add(modifiedLineNumber);
-			}
-		}
-		return modifiedLineNumbers;
-	}
+    private List<Integer> parseModifiedLineNumbers(List<String> lines) {
+        List<Integer> modifiedLineNumbers = new ArrayList<>();
 
-	private int parseModifiedLineNumber(String line) {
-		StringTokenizer stringTokenizer = new StringTokenizer(line, ")");
-		while (stringTokenizer.hasMoreElements()) {
-			String nextElement = ((String) stringTokenizer.nextElement()).trim();
-			if (nextElement.contains("Not Committed Yet") && nextElement.contains("00000000")) {
+        for (String string : lines) {
+            int modifiedLineNumber = parseModifiedLineNumber(string);
+            if (modifiedLineNumber != 0) {
+                modifiedLineNumbers.add(modifiedLineNumber);
+            }
+        }
+        return modifiedLineNumbers;
+    }
 
-				int parseInt = Integer
-						.parseInt(nextElement.substring(nextElement.lastIndexOf(" ") + 1, nextElement.length()));
-				return parseInt;
-			}
+    private int parseModifiedLineNumber(String line) {
+        if (line.startsWith(MODIFIED_LINE_PREFFIX)) {
+            line = line.replace(MODIFIED_LINE_PREFFIX + " ", "");
+            List<String> splitToList = Splitter.on(" ").splitToList(line);
+            return Integer.parseInt(splitToList.get(0).trim());
+        }
+        return 0;
+    }
 
-		}
-		return 0;
-	}
+    @Override
+    public List<Integer> listModifiedLineNumbers(String fileName) {
+        return parseModifiedLineNumbers(blame(fileName));
+    }
 
-	@Override
-	public List<Integer> listModifiedLineNumbers(String fileName) {
-		return parseModifiedLineNumbers(blame(fileName));
-	}
+    @Override
+    public TreeRangeSet<Integer> listModifiedRanges(String fileName) {
 
-	@Override
-	public TreeRangeSet<Integer> listModifiedRanges(String fileName) {
+        List<Integer> modifiedLineNumbers = listModifiedLineNumbers(fileName);
 
-		List<Integer> modifiedLineNumbers = listModifiedLineNumbers(fileName);
+        TreeRangeSet<Integer> rangeSet = TreeRangeSet.create();
 
-		TreeRangeSet<Integer> rangeSet = TreeRangeSet.create();
+        if (modifiedLineNumbers.size() == 1) {
+            rangeSet.add(Range.singleton(modifiedLineNumbers.stream().findFirst().get()));
 
-		if (modifiedLineNumbers.size() == 1) {
-			rangeSet.add(Range.singleton(modifiedLineNumbers.stream().findFirst().get()));
+        } else {
 
-		} else {
+            int currentStart = modifiedLineNumbers.stream().findFirst().get();
+            int previous = currentStart;
+            Iterator<Integer> iterator = modifiedLineNumbers.iterator();
+            while (iterator.hasNext()) {
+                int lineNumber = iterator.next();
 
-			int currentStart = modifiedLineNumbers.stream().findFirst().get();
-			int previous = currentStart;
-			Iterator<Integer> iterator = modifiedLineNumbers.iterator();
-			while (iterator.hasNext()) {
-				int lineNumber = iterator.next();
+                if (!iterator.hasNext()) {
+                    Range<Integer> range = Range.open(currentStart, lineNumber);
+                    rangeSet.add(range);
+                    break;
+                }
 
-				if (!iterator.hasNext()) {
-					Range<Integer> range = Range.open(currentStart, lineNumber);
-					rangeSet.add(range);
-					break;
-				}
-
-				if (lineNumber - (previous + 1) > 0) {
-					if (currentStart == previous) {
-						Range<Integer> range = Range.singleton(currentStart);
-						rangeSet.add(range);
-					} else {
-						Range<Integer> range = Range.open(currentStart, previous);
-						rangeSet.add(range);
-					}
-					currentStart = lineNumber;
-				}
-				previous = lineNumber;
-			}
-
-		}
-		return rangeSet;
-	}
-
+                if (lineNumber - (previous + 1) > 0) {
+                    if (currentStart == previous) {
+                        Range<Integer> range = Range.singleton(currentStart);
+                        rangeSet.add(range);
+                    } else {
+                        Range<Integer> range = Range.open(currentStart, previous);
+                        rangeSet.add(range);
+                    }
+                    currentStart = lineNumber;
+                }
+                previous = lineNumber;
+            }
+        }
+        return rangeSet;
+    }
 }

@@ -1,4 +1,10 @@
-.classpath
+build/classes/
+build/jacoco/
+build/reports/
+build/resources/
+build/test-results/
+build/tmp/
+.classpathi
 .gradle/
 .project
 .settings/
